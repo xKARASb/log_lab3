@@ -1,5 +1,8 @@
 #include <iostream>
 #include <string>
+#include <algorithm>
+#include <cctype>
+#include <vector>
 
 struct Node
 {
@@ -9,7 +12,6 @@ struct Node
 
     explicit Node(const std::string& str, int prio = 0) : inf(str), next(nullptr), priority(prio) {}
 };
-
 
 class List {
 private:
@@ -28,7 +30,6 @@ public:
             std::cout << "ОШИБКА ВЫДЕЛЕНИЯ ПАМЯТИ\n";
             return;
         }
-        
         if (head == nullptr) {
             head = p;
             last = p;
@@ -119,6 +120,15 @@ public:
             }
         }
     }
+        
+    bool containsPriority(int prio) const{
+        Node *f = head;
+        while (f != nullptr) {
+            if (f->priority == prio) return true;
+            f = f->next;
+        }    
+        return false;
+    }
 
     void push(const std::string &str, int prio) {
         Node *current = new (std::nothrow) Node(str, prio);      
@@ -163,6 +173,45 @@ public:
             head = f;
         }
         last = nullptr;
+    }
+
+    bool strCmp(const std::string &str1, const std::string &str2){
+        if (str1.size() != str2.size()) return false;
+
+        return std::equal(str1.begin(), str1.end(), str2.begin(), [](unsigned char a, unsigned char b) {
+            return std::tolower(a) == std::tolower(b);
+        });
+    }
+
+    void del(const std::string &str){
+        int cnt = 0;
+        while (head != nullptr && strCmp(str, head->inf)) {
+            Node *f = head->next;
+            delete head;
+            head = f;
+            ++cnt;
+        }
+
+        if (head == nullptr) {
+            last = nullptr;
+            return;
+        }
+        
+        Node *current = head->next;
+        Node *prev = head;
+        while (current != nullptr){
+            if (strCmp(current->inf, str)) {
+                prev->next = current->next;
+                if (current == last) last = prev;
+                delete current;
+                current = prev->next;
+                ++cnt;
+            } else {
+                prev = current;
+                current = current->next;
+            }
+        }
+        std::cout << "удалено " << cnt << " элементов\n";
     }
 
     QueuePrio(const QueuePrio&) = delete;
@@ -236,14 +285,23 @@ public:
 class Stack {
 private:
     Node *head{nullptr};
+    int sizeS{0};
 public:
     Stack() = default;
 
     ~Stack() {
         clear();
     }
-
     
+    int size(){
+        return sizeS;
+    }
+    
+    bool empty() {
+        if (head == nullptr) return 1;
+        else return false;
+    }
+
     void review() const {
         if (head == nullptr) std::cout << "стек пустой\n";
         else {
@@ -269,14 +327,21 @@ public:
             current->next = head;
             head = current;
         }
+        ++sizeS;
     }
 
-    void pop() {
-        if (head == nullptr) std::cout << "стек пуст\n";
-        else {
+    std::string pop() {
+        std::string str;
+        if (head == nullptr) {
+            std::cout << "стек пуст\n";
+            return "";
+        } else {
+            str = head->inf;
             Node *current = head->next;
             delete head;
             head = current;
+            --sizeS;
+            return str;
         }
     }
 
@@ -286,6 +351,18 @@ public:
             delete head;
             head = f;
         }
+    }
+
+    void reverse() {
+        std::vector<std::string> v;
+        v.reserve(size());
+        int sz = size();
+        while(!empty()) v.push_back(pop());
+        for (int i = 0; i < sz; ++i) {
+             push(v[i]);
+        }
+
+        
     }
 
     Stack(const Stack&) = delete;
@@ -326,7 +403,7 @@ void menuList() {
 void menuQueuePrio() {
     QueuePrio qp;
     int cmd = -1;
-    std::cout << "ОЧЕРЕДЬ С ПРИОРИТЕТОМ\n1. добавить\n2. извлечь\n3. просмотр\n4. очистить\n5. меню\n0. назад\n";
+    std::cout << "ОЧЕРЕДЬ С ПРИОРИТЕТОМ\n1. добавить\n2. извлечь\n3. просмотр\n4. очистить\n5. удаление по строке\n6. меню\n0. назад\n";
     while (cmd != 0) {
         std::cout << "пункт: ";
         if (!(std::cin >> cmd)) break;
@@ -337,6 +414,10 @@ void menuQueuePrio() {
             std::cin >> s;
             std::cout << "приоритет: ";
             std::cin >> prio;
+            while (qp.containsPriority(prio)) {
+                std::cout << "ПРИОРИТЕТ ЗАНЯТ\nприоритет: ";
+                std::cin >> prio;
+            }
             qp.push(s, prio);
         } else if (cmd == 2) {
             qp.pop();
@@ -345,6 +426,11 @@ void menuQueuePrio() {
         } else if (cmd == 4) {
             qp.clear();
         } else if (cmd == 5) {
+            std::string str;
+            std::cout << "введите строку для поиска и удаления совпадений:\n";
+            std::cin >> str;
+            qp.del(str);
+        } else if (cmd == 6) {
             std::cout << "ОЧЕРЕДЬ С ПРИОРИТЕТОМ\n1. добавить\n2. извлечь\n3. просмотр\n4. очистить\n5. меню\n0. назад\n";
         } else if (cmd == 0) {
             break;
@@ -385,7 +471,7 @@ void menuQueue() {
 void menuStack() {
     Stack st;
     int cmd = -1;
-    std::cout << "СТЕК\n1. добавить\n2. извлечь\n3. просмотр\n4. очистить\n5. меню\n0. назад\n";
+    std::cout << "СТЕК\n1. добавить\n2. извлечь\n3. просмотр\n4. очистить\n5. переворот\n6. меню\n0. назад\n";
     while (cmd != 0) {
         std::cout << "пункт: ";
         if (!(std::cin >> cmd)) break;
@@ -401,6 +487,8 @@ void menuStack() {
         } else if (cmd == 4) {
             st.clear();
         } else if (cmd == 5) {
+            st.reverse();
+        } else if (cmd == 6) {
             std::cout << "СТЕК\n1. добавить\n2. извлечь\n3. просмотр\n4. очистить\n5. меню\n0. назад\n";
         } else if (cmd == 0) {
             break;
